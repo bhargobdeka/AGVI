@@ -1,3 +1,6 @@
+%% Online Inference of a 5x5 Q Matrix %%
+% Created by Bhargob Deka and James-A. Goulet, 2022
+%%
 clear;clc
 %% Cholesky matrix
 % [ d1(1) d2(2) d3(3) c1(4) c2(5) c3(6)]
@@ -16,8 +19,7 @@ RandStream.setGlobalStream(RandStream('mt19937ar','seed',rand_seed));  %Initiali
 % [ c2*d1, c1*c2 + c5*d2,    c2^2 + c5^2 + d3^2,          c2*c3 + c5*c6 + c8*d3,             c2*c4 + c5*c7 + c9*d3]
 % [ c3*d1, c1*c3 + c6*d2, c2*c3 + c5*c6 + c8*d3,      c3^2 + c6^2 + c8^2 + d4^2,    c3*c4 + c6*c7 + c8*c9 + c10*d4]
 % [ c4*d1, c1*c4 + c7*d2, c2*c4 + c5*c7 + c9*d3, c3*c4 + c6*c7 + c8*c9 + c10*d4, c4^2 + c7^2 + c9^2 + c10^2 + d5^2]
-%% Parameters
-% A matrix
+
 %% A matrix
 A_LL = 1;
 
@@ -32,12 +34,7 @@ y          = zeros(T,1);        %  Initialization of the vector of observations
 sV         = 1e-02;
 R_T        = sV^2.*eye(n_x);
 A_T        = diag(1*ones(1,n_x));
-% [Q,corr_Q] = make_Q(3,0.4,0.8);
-% corr       = [1 0.1 0.1;...
-%               0.1 1 0.1;...
-%               0.1 0.1 1];
-% sig = 0.6*ones(1,10);
-% sig        = [0.05 0.22 0.37 0.42 0.59 0.7 0.75 0.83 0.8 0.95];
+
 sig        = [-0.3 -0.2 -0.1 0.25 0.35 0.4 0.45 0.5 0.55 0.6];
 corr       = [1 sig(1) sig(2) sig(3) sig(4);...
               sig(1) 3 sig(5) sig(6) sig(7);...
