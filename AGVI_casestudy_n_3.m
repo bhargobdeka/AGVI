@@ -2,10 +2,12 @@
 % Created by Bhargob Deka and James-A. Goulet, 2022
 %%
 clear;clc
+rand_seed=4;
+RandStream.setGlobalStream(RandStream('mt19937ar','seed',rand_seed));  %Initialize random stream number based on clock
 %% Chooose A and true variance terms
-A = 0.8; % A value for each time series
+A = 1; % A value for each time series
 s11 = 1; s22 = 2; s33 = 4; % variance terms
-s12 = 0.95; s13 = 0.99; s23 = 0.95; % covariance terms
+s12 = -0.5; s13 = -0.3; s23 = 0.95; % covariance terms
 %% Parameters
 T          = 1000;                 % Time-serie length
 n_x        = 3;                    % no. of hidden states
@@ -48,8 +50,8 @@ end
 %% Initialization in Cholesky-space E[L], var[L]
 n           = 3;
 total       = n*(n+1)/2;
-mL          = [1.5*ones(n,1);0.1;0.2;0.3];
-SL          = [0.15*ones(n,1);0.5*ones(total-n,1)];
+mL          = [2*ones(n_x,1);0.8*ones(total-n_x,1)];
+SL          = [0.5*ones(n_x,1);0.5*ones(total-n_x,1)];
 ind         = [1 4 2 5 6 3];
 mL = mL(ind);SL = diag(SL(ind));
 %% State Estimation
@@ -168,10 +170,10 @@ if disp_plot==1
         V_W(:,t)              = diag(P_P(:,:,t));
     end
     t  = 1:length(EX);
-    figure;
+%     figure;
     for i=1:n_x
-        subplot(n_x,1,i)
-        
+%         subplot(n_x,1,i)
+        figure
         xw = E_W(i,t);
         sX = sqrt(V_W(i,t));
         plot(t,repmat(sW(i),[1,length(EX)]),'-.r','Linewidth',1)
@@ -181,14 +183,15 @@ if disp_plot==1
         plot(t,xw,'k')
         hold off
         xlabel('$t$','Interpreter','latex')
-        ylabel(['$\sigma^{\mathtt{AR}}' num2str(i) '$'],'Interpreter','latex')
+        ylabel(['$\sigma^2_{W}' num2str(i) '$'],'Interpreter','latex')
         ylim([0,5])
         title('variance')
     end
     % Plotting Covariances
-    figure;
+%     figure;
     for i=1:n_w2-n_w
-        subplot(n_x,1,i)
+%         subplot(n_x,1,i)
+        figure
         xw = E_W(n_w+i,t);
         sX = sqrt(V_W(n_w+i,t));
         plot(t,repmat(sW_cov(i,1),[1,length(EX)]),'-.r','Linewidth',1)
@@ -198,7 +201,7 @@ if disp_plot==1
         plot(t,xw,'k')
         hold off
         xlabel('$t$','Interpreter','latex')
-        ylabel(['$\sigma^{\mathtt{AR}}' num2str(i) '$'],'Interpreter','latex')
+        ylabel(['$\sigma^2_{W}' num2str(i) '$'],'Interpreter','latex')
         ylim([-2,2])
         title('covariance')
     end
