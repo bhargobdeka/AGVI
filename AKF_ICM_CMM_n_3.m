@@ -3,8 +3,8 @@
 % Created by Bhargob Deka and James-A. Goulet, 2022
 %%
 clear;clc
-rand_seed=4;
-RandStream.setGlobalStream(RandStream('mt19937ar','seed',rand_seed));  %Initialize random stream number based on clock
+% rand_seed=4;
+% RandStream.setGlobalStream(RandStream('mt19937ar','seed',rand_seed));  %Initialize random stream number based on clock
 N   = 1e3;  % number of simulation steps
 n_x = 3; % no. of hidden states
 sV  = 1e-02; % observation error stdv.
@@ -28,7 +28,7 @@ sys.H = diag(ones(1,n_x));
 % initial estimate
 param.xp = zeros(n_x,1); % initial state estimate
 param.lags = 1; % # of time lags
-param.K = diag(0.99*ones(1,n_x)); % stable linear filter gain
+param.K = diag(0.5*ones(1,n_x)); % stable linear filter gain
 
 %% ICM PARAMETERS 
 %--------------------------------------------------
@@ -40,14 +40,14 @@ ICMpar.K = param.K; % stable linear filter gain
 %--------------------------------------------------
 % initial state estimate
 CMMpar.xp = param.xp;
-CMMpar.Pp = 10*eye(n_x);
+CMMpar.Pp = 1*eye(n_x);
 
 % initial estimates of Q and R
 CMMpar.Q = eye(n_x);
 CMMpar.R = eye(n_x);
 
 % initial time instant for matrices estimation
-CMMpar.erq = floor(N/2);
+CMMpar.erq = floor(N/4);%N/2
 no_of_datasets = 5;
 %% Looping for each synthetic dataset to estimate Q matrix
 for j = 1:no_of_datasets
@@ -69,7 +69,7 @@ for j = 1:no_of_datasets
       end
     end
     %% Get the estimated Q matrices
-    methods = {'ICM','CMM'};
+    methods = {'ICM','CMM'};%'ICM',
     for i=1:cntMethods
       fprintf('Method %s\n',methods{i});
       Q_est = est{i,1}.Q;

@@ -54,7 +54,7 @@ for j = 1:no_of_datasets
     n           = 3;
     total       = n*(n+1)/2;
     mL          = [2*ones(n_x,1);0.8*ones(total-n_x,1)];
-    SL          = [0.5*ones(n_x,1);0.5*ones(total-n_x,1)];
+    SL          = [1*ones(n_x,1);0.5*ones(total-n_x,1)];
     ind         = [1 4 2 5 6 3];
     mL = mL(ind);SL = diag(SL(ind));
     %% State Estimation
@@ -180,42 +180,45 @@ for j = 1:no_of_datasets
         L_mat = tril(ones(n),-1);
         Q_mat(logical(L_mat)) = E_W(4:end,end);
         save(['Q_AGVI_results/Q_AGVI_Dataset' num2str(j) '.mat'],'Q_mat')
-        %%
-        t  = 1:length(EX);
-    %     figure;
-        for i=1:n_x
-    %         subplot(n_x,1,i)
-            figure
-            xw = E_W(i,t);
-            sX = sqrt(V_W(i,t));
-            plot(t,repmat(sW(i),[1,length(EX)]),'-.r','Linewidth',1)
-            hold on;
-            patch([t,fliplr(t)],[xw+sX,fliplr(xw-sX)],'g','FaceAlpha',0.2,'EdgeColor','none')
-            hold on;
-            plot(t,xw,'k')
-            hold off
-            xlabel('$t$','Interpreter','latex')
-            ylabel(['$\sigma^2_{W}' num2str(i) '$'],'Interpreter','latex')
-            ylim([0,5])
-            title('variance')
-        end
-        % Plotting Covariances
-    %     figure;
-        for i=1:n_w2-n_w
-    %         subplot(n_x,1,i)
-            figure
-            xw = E_W(n_w+i,t);
-            sX = sqrt(V_W(n_w+i,t));
-            plot(t,repmat(sW_cov(i,1),[1,length(EX)]),'-.r','Linewidth',1)
-            hold on;
-            patch([t,fliplr(t)],[xw+sX,fliplr(xw-sX)],'g','FaceAlpha',0.2,'EdgeColor','none')
-            hold on;
-            plot(t,xw,'k')
-            hold off
-            xlabel('$t$','Interpreter','latex')
-            ylabel(['$\sigma^2_{W}' num2str(i) '$'],'Interpreter','latex')
-            ylim([-2,2])
-            title('covariance')
+        %% Generate plot
+        gen_plot = 0;
+        if gen_plot == 1
+            t  = 1:length(EX);
+        %     figure;
+            for i=1:n_x
+        %         subplot(n_x,1,i)
+                figure
+                xw = E_W(i,t);
+                sX = sqrt(V_W(i,t));
+                plot(t,repmat(sW(i),[1,length(EX)]),'-.r','Linewidth',1)
+                hold on;
+                patch([t,fliplr(t)],[xw+sX,fliplr(xw-sX)],'g','FaceAlpha',0.2,'EdgeColor','none')
+                hold on;
+                plot(t,xw,'k')
+                hold off
+                xlabel('$t$','Interpreter','latex')
+                ylabel(['$\sigma^2_{W}' num2str(i) '$'],'Interpreter','latex')
+                ylim([0,5])
+                title('variance')
+            end
+            % Plotting Covariances
+        %     figure;
+            for i=1:n_w2-n_w
+        %         subplot(n_x,1,i)
+                figure
+                xw = E_W(n_w+i,t);
+                sX = sqrt(V_W(n_w+i,t));
+                plot(t,repmat(sW_cov(i,1),[1,length(EX)]),'-.r','Linewidth',1)
+                hold on;
+                patch([t,fliplr(t)],[xw+sX,fliplr(xw-sX)],'g','FaceAlpha',0.2,'EdgeColor','none')
+                hold on;
+                plot(t,xw,'k')
+                hold off
+                xlabel('$t$','Interpreter','latex')
+                ylabel(['$\sigma^2_{W}' num2str(i) '$'],'Interpreter','latex')
+                ylim([-2,2])
+                title('covariance')
+            end
         end
     end
 end
