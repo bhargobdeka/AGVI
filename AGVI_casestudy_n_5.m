@@ -7,7 +7,7 @@ RandStream.setGlobalStream(RandStream('mt19937ar','seed',rand_seed));  %Initiali
 %% A matrix
 A_LL = 1;
 %% Q matrix
-T=1000;                 %Time-serie length
+T=1000;                 % Time-series length
 N=50;
 n_x        = 5;
 n_w        = n_x;

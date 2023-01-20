@@ -129,7 +129,7 @@ load(filename);
         end
         
     end
-    runtime_e = toc(runtime_s)
+    runtime_e(j) = toc(runtime_s)
     save(['Q_SWVBAKF_results/Q_SWVBAKF_Dataset' num2str(j) '.mat'],'new_Qapriv')
 end
 

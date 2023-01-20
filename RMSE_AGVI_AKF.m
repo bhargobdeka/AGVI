@@ -5,7 +5,7 @@ clear;clc
 rand_seed=4;
 RandStream.setGlobalStream(RandStream('mt19937ar','seed',rand_seed));  %Initialize random stream number based on clock
 format short
-True_var    = [1;-0.5;-0.3;2;0.95;4];
+True_var    = [1;-0.5;-0.3;2;0.95;4];%s11, s12, s13, s22, s23, s33
 folder  = {'AGVI','AKF','AKF','SWVBAKF'};
 methods = {'AGVI','ICM','CMM','SWVBAKF'};
 M       = length(methods);

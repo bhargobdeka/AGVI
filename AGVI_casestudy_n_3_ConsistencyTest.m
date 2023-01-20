@@ -1,0 +1,172 @@
+%% Online Inference of a 3x3 Q Matrix %%
+% Created by Bhargob Deka and James-A. Goulet, 2022
+%%
+clear;clc
+% rand_seed=4;
+% RandStream.setGlobalStream(RandStream('mt19937ar','seed',rand_seed));  %Initialize random stream number based on clock
+%% Chooose A and true variance terms
+A = 1; % A value for each time series
+s11 = 1; s22 = 2; s33 = 4; % variance terms
+s12 = -0.5; s13 = -0.3; s23 = 0.95; % covariance terms
+%% Parameters
+T          = 1000;                 % Time-serie length
+n_x        = 3;                    % no. of hidden states
+n_w        = n_x;                  % no. of process error terms
+
+n_w2hat    = n_x*(n_x+1)/2;        % total variance and covariance terms   
+y          = zeros(T,1);           % initialization of the vector of observations
+sV         = 1e-02;                % observation error variance
+R_T        = sV^2.*eye(n_x);
+%% A matrix
+A_G  = blkdiag(A,A,A);     % Global A matrix
+%% Q matrix
+corr       = [s11 s12 s13;... 
+              s12 s22 s23;...
+              s13 s23 s33];
+Q          =  eye(3)*corr;
+%% Check if matrix is psd or not
+Eg = eig(Q);
+if any(Eg(Eg<0))
+    error('Q matrix is non-PSD!')
+end
+sW             = diag(Q)'; % variance terms
+sW_cov         = [Q(1,2:3)';Q(2,3)]; %covariance terms
+no_of_datasets = 5;
+runtime        = zeros(no_of_datasets,1);
+N_ANEES        = zeros(1,no_of_datasets);
+%% Prior combination
+alpha          = [1.6, 1.8, 2];
+beta           = [0.6, 0.8, 1];
+for k = 1:length(alpha)
+    for j = 1:no_of_datasets
+        %% Data
+        YT          = zeros(n_x,T);
+        x_true      = zeros(n_x,T);
+        x_true(:,1) = [0;0;0];
+        w           = chol(Q)'*randn(n_x,T);
+        v           = chol(R_T)'*randn(n_x,T);
+        C_LL        = 1;
+        C_T         = blkdiag(C_LL,C_LL,C_LL);
+        for t = 2:T
+            x_true(:,t)  = A_G*x_true(:,t-1) + w(:,t);
+            YT(:,t)      = C_T*x_true(:,t)   + v(:,t);
+        end
+        %     filename = sprintf('Datasets_n_3/Dataset%d.mat',j);
+        %     load(filename);
+        %% Detecting and filling outliers (more than 3 std from mean)
+        % YT = filloutliers(YT,'center','mean','ThresholdFactor', 3);
+        NEES_AGVI    = zeros(1,T);
+        %% Initialization in Cholesky-space E[L], var[L]
+        n           = 3;
+        total       = n*(n+1)/2;
+        mL          = [alpha(k)*ones(n_x,1);beta(k)*ones(total-n_x,1)];
+        SL          = [1*ones(n_x,1);0.5*ones(total-n_x,1)];
+        ind         = [1 4 2 5 6 3];
+        mL = mL(ind);SL = diag(SL(ind));
+        %% State Estimation
+        % initialization of L
+        E_Lw        = zeros(total,T);
+        P_Lw        = zeros(total,total,T);
+        EX          = zeros(n_w+n_w2hat,T);
+        E_Lw(:,1)   = mL;
+        P_Lw(:,:,1) = SL;
+        EX(:,1)     = [zeros(1,n_x) mL']';    %[E[\bm{X}]  E[\bm{W2hat}]]
+        PX(:,:,1)   = diag([1*ones(1,n_x), diag(SL)']);    %[P[\bm{X}]  P[\bm{W2hat}]]
+        eig_Sp      = zeros(n,T);
+        index_eig   = zeros(1,T);
+        ind_covij   = multiagvi.index_covij(n);
+        n_w2        = n_x*(n_x+1)/2;
+        %% Indices
+        % cov(w_iw_j,w_kw_l) and the indices for each row
+        ind_wijkl   = multiagvi.indcov_wijkl(n_x);% Creating the cells that will hold the covariance terms
+        %% Getting the mean indices
+        ind_mu           = multiagvi.ind_mean(n_x,ind_wijkl);
+        %% Getting the covariance indices from the \Sigma_W matrix
+        ind_cov          = multiagvi.ind_covariance(n_w2,n_w,ind_wijkl);
+        %% Computing the indices for the covariances for prior \Sigma_W^2:
+        ind_cov_prior    = multiagvi.indcov_priorWp(ind_wijkl,n_w2,n_x);
+        start = tic;
+        for t=2:T
+            Ep      = [A_G*EX(1:n_x,t-1); zeros(n_x,1)];           % mu_t|t-1
+            mL      = E_Lw(:,t-1);
+            SL      = P_Lw(:,:,t-1);
+            %% Matrices for mL and SL
+            mL_mat = triu(ones(n));
+            mL_mat(logical(mL_mat)) = mL;
+            SL_mat = triu(ones(n));
+            SL_mat(logical(SL_mat)) = diag(SL);
+            %     m      = logical(triu(mL_mat));
+            %% Initialization for Product L^T*L
+            [E_P,P_P,Cov_L_P] = multiagvi.LtoP(n,mL_mat,SL_mat,SL,ind_covij);
+            % Covariance matrix construction for Prediction Step : Sigma_t|t-1
+            Q_W  = triu(ones(n));
+            Q_W(logical(Q_W)) = E_P;
+            Q_W = triu(Q_W)+triu(Q_W,1)';
+            C   = [eye(n_x) zeros(n_x)];
+            %%  1st update step:
+            [EX1,PX1] = multiagvi.KFPredict(A_G,C,Q_W,R_T,YT(:,t),PX(1:n_x,1:n_x,t-1),Ep);
+            PX1 = (PX1+PX1')/2;
+            EX(1:n_w,t)       = EX1(1:n_w);    % n = n_x*2 i.e., no of x + no of w
+            PX(1:n_w,1:n_w,t) = PX1(1:n_w,1:n_w);
+            % NEES
+            NEES_AGVI(:,t)  = (x_true(1:n_x,t)-EX(1:n_x,t))'*inv(PX(1:n_x,1:n_x,t))*(x_true(1:n_x,t)-EX(1:n_x,t));
+            %% Collecting W|y
+            EX_wy   = EX1(end-n_x+1:end,1);
+            PX_wy   = PX1(end-n_x+1:end,end-n_x+1:end,1);
+            m       = triu(true(size(PX_wy)),1);  % Finding the upper triangular elements
+            cwiwjy  = PX_wy(m)';                  % covariance elements between W's after update
+            P_wy    = diag(PX_wy); % variance of updated W's
+
+            %%% 2nd Update step:
+            %% Computing W^2|y
+            [m_wii_y,s_wii_y,m_wiwj_y, s_wiwj_y] = multiagvi.meanvar_w2pos(EX_wy,PX_wy,cwiwjy, P_wy, n_w2hat,n_x);
+
+            %% Computing the covariance matrix \Sigma_W^2|y:
+            cov_wijkl = multiagvi.cov_w2pos(PX_wy,EX_wy,n_w2,ind_cov,ind_mu);
+
+            %% Adding the variances and covariances of W^p to form \Sigma_W^p
+            PX_wpy    = multiagvi.var_wpy(cov_wijkl,s_wii_y,s_wiwj_y);
+
+            %% Creating E[W^p]
+            EX_wpy        = [m_wii_y' m_wiwj_y];
+
+            %% Computing prior mean and covariance matrix of Wp
+            m_wsqhat    = E_P;
+            s_wsqhat    = P_P;
+            PX_wp       = multiagvi.covwp(P_P,m_wsqhat,n_x,n_w2,n_w);
+
+            %% Computing the prior covariance matrix \Sigma_W^p
+            cov_prior_wijkl = multiagvi.priorcov_wijkl(m_wsqhat,ind_cov_prior,n_w2);
+            %% Adding the variances and covariances for Prior \Sigma_W^p
+            cov_wp              = cell2mat(reshape(cov_prior_wijkl,size(cov_prior_wijkl,2),1));
+            s_wp                = zeros(size(PX_wp,1));
+            s_wp(1:end-1,2:end) = cov_wp;
+            PX_wp               = PX_wp + s_wp;
+            PX_wp               = triu(PX_wp)+triu(PX_wp,1)'; % adding the lower triangular matrix
+
+            %% Creating Prior E[W^p]
+            E_wp        = m_wsqhat;
+            %% Smoother Equations
+            [ES,PS] = multiagvi.agviSmoother(E_wp,s_wsqhat,PX_wp,EX_wpy,PX_wpy,E_P,P_P);
+            EX(end-n_w2+1:end,t)                 = ES;
+            PX(end-n_w2+1:end,end-n_w2+1:end,t)  = PS;
+
+            E_Pw_y = EX(end-n_w2+1:end,t);
+            P_Pw_y  = PX(end-n_w2+1:end,end-n_w2+1:end,t);
+            P_Pw_y  = (P_Pw_y+P_Pw_y')/2;
+
+            %% Converting from Pw to Lw
+            [EL_pos,PL_pos] = multiagvi.PtoL(Cov_L_P,E_P,P_P,E_Lw(:,t-1),P_Lw(:,:,t-1),E_Pw_y,P_Pw_y);
+            E_Lw(:,t)   = EL_pos;
+            P_Lw(:,:,t) = PL_pos;
+        end
+        runtime(j)      = toc(start);
+        Avg_NEES_time   = NEES_AGVI;
+        %     plot(Avg_NEES_time)
+        N_ANEES(j)       = length(Avg_NEES_time(Avg_NEES_time > 9.348 | Avg_NEES_time < 0.216));
+        disp(N_ANEES)
+        %     N_ANEES          = mean(Avg_NIS_time);
+    end
+    mean_ANEES_dataset(k) = sum(N_ANEES)/no_of_datasets;
+end
+mean_ANEES_prior = mean(mean_ANEES_dataset);

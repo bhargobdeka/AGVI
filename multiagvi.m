@@ -176,7 +176,7 @@ classdef multiagvi
             my  = C*Ep;
             K   = SYX/(SY + 1e-08);
             e   = y-my; %YT(:,t)
-            NIS = e' * inv(SY) * e;
+            NIS = e' * pinv(SY) * e;
             %% Ist Update step:
             EX_pos  = Ep+K*e;
             PX_pos  = Sp-K*SYX';

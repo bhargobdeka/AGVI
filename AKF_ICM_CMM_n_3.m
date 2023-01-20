@@ -28,7 +28,7 @@ sys.H = diag(ones(1,n_x));
 % initial estimate
 param.xp = zeros(n_x,1); % initial state estimate
 param.lags = 1; % # of time lags
-param.K = diag(0.5*ones(1,n_x)); % stable linear filter gain
+param.K = diag(0.99*ones(1,n_x)); % stable linear filter gain
 
 %% ICM PARAMETERS 
 %--------------------------------------------------
@@ -47,14 +47,15 @@ CMMpar.Q = eye(n_x);
 CMMpar.R = eye(n_x);
 
 % initial time instant for matrices estimation
-CMMpar.erq = floor(N/4);%N/2
+CMMpar.erq = floor(100);%N/2
 no_of_datasets = 5;
 %% Looping for each synthetic dataset to estimate Q matrix
 for j = 1:no_of_datasets
     filename = sprintf('Datasets_n_3/Dataset%d.mat',j);
     MC = 1e0;
     cntMethods = 2;
-    est = cell(cntMethods,MC);
+    est     = cell(cntMethods,MC);
+    runtime = cell(cntMethods,no_of_datasets);
     for imc = 1:MC
         dat = load(filename);
         z   = dat.YT;
@@ -62,9 +63,13 @@ for j = 1:no_of_datasets
       for i = 1:cntMethods
         switch i
           case 1
+            start = tic;
             est{i,imc} = ICM(sys,z,ICMpar);
+            runtime_ICM(j) = toc(start);
           case 2
+            start = tic;
             est{i,imc} = CMM(sys,z,CMMpar);
+            runtime_CMM(j) = toc(start);
         end
       end
     end

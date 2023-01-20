@@ -39,17 +39,18 @@ w           = chol(Q)'*randn(n_x,T);
 v           = chol(R_T)'*randn(n_x,T);
 C_LL        = 1;
 C_T         = blkdiag(C_LL,C_LL,C_LL);
-% for t = 2:T
-%     x_true(:,t)  = A_G*x_true(:,t-1) + w(:,t);
-%     YT(:,t)      = C_T*x_true(:,t)   + v(:,t);
-% end
-no_of_datasets = 5;
+for t = 2:T
+    x_true(:,t)  = A_G*x_true(:,t-1) + w(:,t);
+    YT(:,t)      = C_T*x_true(:,t)   + v(:,t);
+end
+no_of_datasets = 1;
+runtime = zeros(no_of_datasets,1);
 for j = 1:no_of_datasets
-    filename = sprintf('Datasets_n_3/Dataset%d.mat',j);
-    load(filename);
+%     filename = sprintf('Datasets_n_3/Dataset%d.mat',j);
+%     load(filename);
     %% Detecting and filling outliers (more than 3 std from mean)
-    % YT = filloutliers(YT,'center','mean','ThresholdFactor', 3); 
-    
+%     YT = filloutliers(YT,'center','mean','ThresholdFactor', 3); 
+    NIS_AGVI    = zeros(1,T);
     %% Initialization in Cholesky-space E[L], var[L]
     n           = 3;
     total       = n*(n+1)/2;
@@ -98,7 +99,8 @@ for j = 1:no_of_datasets
         Q_W = triu(Q_W)+triu(Q_W,1)';
         C   = [eye(n_x) zeros(n_x)];
         %%  1st update step:
-        [EX1,PX1] = multiagvi.KFPredict(A_G,C,Q_W,R_T,YT(:,t),PX(1:n_x,1:n_x,t-1),Ep);
+        [EX1,PX1,NIS] = multiagvi.KFPredict(A_G,C,Q_W,R_T,YT(:,t),PX(1:n_x,1:n_x,t-1),Ep);
+        NIS_AGVI(:,t)   = NIS;
         PX1 = (PX1+PX1')/2;
         EX(1:n_w,t)       = EX1(1:n_w);    % n = n_x*2 i.e., no of x + no of w
         PX(1:n_w,1:n_w,t) = PX1(1:n_w,1:n_w);
@@ -152,7 +154,8 @@ for j = 1:no_of_datasets
         E_Lw(:,t)   = EL_pos;
         P_Lw(:,:,t) = PL_pos;
     end
-    runtime = toc(start)
+    runtime(j) = toc(start);
+    
     %% Plotting
     disp_plot = 1;
     if disp_plot==1
@@ -181,7 +184,7 @@ for j = 1:no_of_datasets
         Q_mat(logical(L_mat)) = E_W(4:end,end);
         save(['Q_AGVI_results/Q_AGVI_Dataset' num2str(j) '.mat'],'Q_mat')
         %% Generate plot
-        gen_plot = 0;
+        gen_plot = 1;
         if gen_plot == 1
             t  = 1:length(EX);
         %     figure;
@@ -221,4 +224,6 @@ for j = 1:no_of_datasets
             end
         end
     end
+    
 end
+mean(runtime)
