@@ -14,21 +14,33 @@ n_x     = 3;                    % no. of hidden states
 n_w     = n_x;                  % no. of process error terms
 n_w2hat = n_x*(n_x+1)/2;        % total variance and covariance terms   
 Cov     = zeros(n_w2hat,M);
-for i = 1:length(methods)
-    Q{i} = load(['Q_' folder{i} '_results/Q_' methods{i} '_Dataset1.mat']);
-    if strcmp(methods{i},'AGVI')
-        Q_est = Q{i,1}.Q_mat;
-    elseif strcmp(methods{i},'ICM')
-        Q_est = Q{i,1}.Q_est;
-    elseif strcmp(methods{i},'CMM')
-        Q_est = Q{i,1}.Q_est;
-    elseif strcmp(methods{i},'SWVBAKF')
-        Q_est = Q{i,1}.new_Qapriv;
+% RMSE    = zeros(n_w2hat,M);
+N = 5;
+for j = 1:N % for each synthetic datasets
+    for i = 1:length(methods)
+        Q{i} = load(['Q_' folder{i} '_results/Q_' methods{i} '_Dataset' num2str(j) '.mat']);
+        if strcmp(methods{i},'AGVI')
+            Q_est = Q{i,1}.Q_mat;
+        elseif strcmp(methods{i},'ICM')
+            Q_est = Q{i,1}.Q_est;
+        elseif strcmp(methods{i},'CMM')
+            Q_est = Q{i,1}.Q_est;
+        elseif strcmp(methods{i},'SWVBAKF')
+            Q_est = Q{i,1}.new_Qapriv;
+        end
+        ind = tril(true(size(Q_est)));
+        Cov(:,i)  = Q_est(ind);
+        
     end
-    ind = tril(true(size(Q_est)));
-    Cov(:,i) = Q_est(ind);
-    RMSE = sqrt(mean((True - Cov(:,k)).^2));
+    CovT = Cov'; % one row represent all variances for one method
+    % Cov for each method
+    CovT_AGVI(j,:)    = CovT(1,:);
+    CovT_ICM(j,:)     = CovT(2,:);
+    CovT_CMM(j,:)     = CovT(3,:);
+    CovT_SWVBAKF(j,:) = CovT(4,:);
 end
+for k = 1:length
+RMSE_AGVI() = sqrt(mean((true(1) - CovT_AGVI(:,1)).^2));
 
 
 
